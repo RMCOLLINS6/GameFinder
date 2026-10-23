@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameFinder - Find Your Next Favorite Game</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bgDark: '#0A0910',
+                        bgCard: '#121020',
+                        surfaceDark: '#18152B',
+                        surfaceLight: '#201C38',
+                        accentViolet: '#8B5CF6',
+                        accentVioletHover: '#7C3AED',
+                        accentGlow: '#A78BFA'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0A0910;
+            color: #F3F4F6;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        .glow-purple {
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.35);
+        }
+        .glow-purple-sm {
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.25);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0A0910;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #201C38;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #8B5CF6;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-accentViolet selection:text-white">
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-40 bg-bgCard/90 backdrop-blur-md border-b border-surfaceLight/50 px-4 lg:px-8 py-3 transition-all">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="resetView()">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-accentViolet to-indigo-500 flex items-center justify-center text-white font-bold text-xl shadow-lg glow-purple-sm">
+                    ⚡
+                </div>
+                <div>
+                    <span class="text-xl font-extrabold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-accentGlow">GameFinder</span>
+                    <span class="text-xs text-accentGlow block font-mono">v1.0 • Offline Demo</span>
+                </div>
+            </div>
+
+            <nav class="hidden md:flex items-center gap-6 text-sm font-medium">
+                <button onclick="setActiveNav('discover')" id="nav-discover" class="text-accentGlow hover:text-white transition flex items-center gap-1">
+                    🔍 Discover
+                </button>
+                <button onclick="setActiveNav('compare')" id="nav-compare" class="text-gray-400 hover:text-white transition flex items-center gap-1">
+                    ⚖️ Compare (<span id="compareCount">0</span>)
+                </button>
+                <button onclick="setActiveNav('favorites')" id="nav-favorites" class="text-gray-400 hover:text-white transition flex items-center gap-1">
+                    ❤️ Favorites (<span id="favCount">0</span>)
+                </button>
+            </nav>
+
+            <div class="flex items-center gap-3">
+                <button onclick="openModal('signInModal')" class="px-4 py-2 text-xs md:text-sm font-semibold rounded-lg bg-surfaceLight hover:bg-surfaceDark text-white border border-accentViolet/30 transition shadow-sm">
+                    Sign In (Simulated)
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Body -->
+    <main class="max-w-7xl mx-auto px-4 lg:px-8 py-6 w-full flex-grow">
+        
+        <!-- Hero Section -->
+        <section class="mb-8 text-center md:text-left bg-gradient-to-r from-surfaceDark via-bgCard to-surfaceDark p-6 md:p-8 rounded-2xl border border-surfaceLight/60 relative overflow-hidden shadow-2xl">
+            <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-accentViolet/10 rounded-full blur-3xl pointer-events-none"></div>
+            
+            <h1 class="text-3xl md:text-5xl font-extrabold text-white mb-3 tracking-tight">
+                Find your next <span class="bg-clip-text text-transparent bg-gradient-to-r from-accentGlow via-accentViolet to-indigo-400">favorite game</span>.
+            </h1>
+            <p class="text-gray-400 text-sm md:text-base max-w-2xl mb-6">
+                Instant smart recommendations tailored by playstyle, price, platform, and group preferences.
+            </p>
+
+            <!-- Search Input Area -->
+            <div class="max-w-3xl flex flex-col md:flex-row gap-3">
+                <div class="relative flex-1">
+                    <input type="text" id="promptInput" placeholder="e.g. Find me a free horror game I can play with friends on PC" 
+                           class="w-full bg-bgDark/80 text-white placeholder-gray-500 text-sm rounded-xl px-4 py-3.5 border border-surfaceLight focus:outline-none focus:border-accentViolet transition shadow-inner">
+                    <button onclick="clearPrompt()" id="clearPromptBtn" class="hidden absolute right-3 top-3 text-gray-400 hover:text-white">✕</button>
+                </div>
+                <button onclick="handleFindGame()" class="px-6 py-3.5 bg-gradient-to-r from-accentViolet to-indigo-600 hover:from-accentVioletHover hover:to-indigo-700 text-white font-bold text-sm rounded-xl shadow-lg glow-purple transition flex items-center justify-center gap-2">
+                    ⚡ Find My Game
+                </button>
+            </div>
+
+            <!-- Quick Suggestion Chips -->
+            <div class="mt-4 flex flex-wrap gap-2 text-xs">
+                <span class="text-gray-400 self-center font-medium mr-1">Quick prompts:</span>
+                <button onclick="setPrompt('Free horror game with friends on PC')" class="bg-surfaceDark hover:bg-surfaceLight text-gray-300 hover:text-white px-3 py-1.5 rounded-lg border border-surfaceLight/50 transition">👻 Free Horror Co-op</button>
+                <button onclick="setPrompt('Story rich singleplayer sci-fi RPG under $20')" class="bg-surfaceDark hover:bg-surfaceLight text-gray-300 hover:text-white px-3 py-1.5 rounded-lg border border-surfaceLight/50 transition">🌌 Sci-Fi RPG < $20</button>
+                <button onclick="setPrompt('Competitive casual switch multiplayer game')" class="bg-surfaceDark hover:bg-surfaceLight text-gray-300 hover:text-white px-3 py-1.5 rounded-lg border border-surfaceLight/50 transition">🎮 Switch Party Game</button>
+            </div>
+        </section>
+
+        <!-- Filter Bar -->
+        <section class="mb-8 bg-surfaceDark/80 rounded-2xl p-4 border border-surfaceLight/40 backdrop-blur-sm">
+            <div class="flex items-center justify-between mb-3 cursor-pointer select-none" onclick="toggleFilters()">
+                <div class="flex items-center gap-2 font-semibold text-sm text-gray-200">
+                    <span>🎛️ Search Filters</span>
+                    <span id="activeFilterBadge" class="hidden bg-accentViolet text-white text-[10px] font-bold px-2 py-0.5 rounded-full">Active</span>
+                </div>
+                <div class="text-xs text-accentGlow hover:underline flex items-center gap-1">
+                    <span id="filterToggleText">Hide Filters</span>
+                    <span id="filterArrow">▲</span>
+                </div>
+            </div>
+
+            <div id="filterContent" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 pt-2 border-t border-surfaceLight/30">
+                <!-- Platform Filter -->
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1 font-medium">Platform</label>
+                    <select id="filterPlatform" onchange="applyFilters()" class="w-full bg-bgDark text-xs text-gray-200 rounded-lg p-2 border border-surfaceLight focus:border-accentViolet outline-none">
+                        <option value="All">All Platforms</option>
+                        <option value="PC">PC</option>
+                        <option value="PlayStation">PlayStation</option>
+                        <option value="Xbox">Xbox</option>
+                        <option value="Switch">Switch</option>
+                    </select>
+                </div>
+
+                <!-- Budget Filter -->
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1 font-medium">Budget</label>
+                    <select id="filterBudget" onchange="applyFilters()" class="w-full bg-bgDark text-xs text-gray-200 rounded-lg p-2 border border-surfaceLight focus:border-accentViolet outline-none">
+                        <option value="All">Any Price</option>
+                        <option value="Free">Free Only</option>
+                        <option value="Under20">Under $20</option>
+                        <option value="Paid">Paid Only</option>
+                    </select>
+                </div>
+
+                <!-- Mode Filter -->
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1 font-medium">Game Mode</label>
+                    <select id="filterMode" onchange="applyFilters()" class="w-full bg-bgDark text-xs text-gray-200 rounded-lg p-2 border border-surfaceLight focus:border-accentViolet outline-none">
+                        <option value="All">All Modes</option>
+                        <option value="Single-player">Single-player</option>
+                        <option value="Co-op">Co-op</option>
+                        <option value="Multiplayer">Multiplayer</option>
+                    </select>
+                </div>
+
+                <!-- Genre Filter -->
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1 font-medium">Genre</label>
+                    <select id="filterGenre" onchange="applyFilters()" class="w-full bg-bgDark text-xs text-gray-200 rounded-lg p-2 border border-surfaceLight focus:border-accentViolet outline-none">
+                        <option value="All">All Genres</option>
+                        <option value="Horror">Horror</option>
+                        <option value="RPG">RPG</option>
+                        <option value="Action">Action</option>
+                        <option value="Party">Party</option>
+                        <option value="Strategy">Strategy</option>
+                    </select>
+                </div>
+
+                <!-- Difficulty Filter -->
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1 font-medium">Difficulty</label>
+                    <select id="filterDifficulty" onchange="applyFilters()" class="w-full bg-bgDark text-xs text-gray-200 rounded-lg p-2 border border-surfaceLight focus:border-accentViolet outline-none">
+                        <option value="All">Any Level</option>
+                        <option value="Casual">Casual</option>
+                        <option value="Moderate">Moderate</option>
+                        <option value="Challenging">Challenging</option>
+                    </select>
+                </div>
+
+                <!-- Reset Button -->
+                <div class="flex items-end">
+                    <button onclick="resetFilters()" class="w-full bg-surfaceLight hover:bg-red-950/40 text-gray-300 hover:text-red-400 text-xs font-semibold p-2 rounded-lg border border-surfaceLight/60 hover:border-red-500/30 transition flex items-center justify-center gap-1">
+                        🔄 Reset Filters
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Active View Header -->
+        <div class="flex items-center justify-between mb-4">
+            <h2 id="sectionTitle" class="text-xl font-bold text-white flex items-center gap-2">
+                🎮 Recommended Games <span id="gameCount" class="text-xs bg-surfaceLight px-2.5 py-0.5 rounded-full text-accentGlow font-mono">6</span>
+            </h2>
+            <div id="viewFavoritesNotice" class="hidden text-xs text-gray-400">
+                Showing saved games only.
+            </div>
+        </div>
+
+        <!-- Games Grid -->
+        <div id="gamesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Dynamically populated by JS -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden py-16 text-center bg-surfaceDark/40 rounded-2xl border border-dashed border-surfaceLight">
+            <div class="text-4xl mb-3">👻</div>
+            <h3 class="text-lg font-bold text-white mb-1">No games matched your criteria</h3>
+            <p class="text-gray-400 text-sm max-w-md mx-auto mb-4">Try adjusting your filters, searching for a different prompt, or clicking reset.</p>
+            <button onclick="resetFilters()" class="px-4 py-2 bg-accentViolet hover:bg-accentVioletHover text-white text-xs font-bold rounded-lg transition">Clear All Filters</button>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-bgCard border-t border-surfaceLight/40 py-6 px-4 text-center text-xs text-gray-500">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <span class="font-bold text-gray-400">GameFinder</span> • Simulated Offline Sandbox Experience
+            </div>
+            <div class="flex gap-4">
+                <a href="javascript:void(0)" onclick="toast('Simulated Privacy Policy')" class="hover:underline">Privacy Policy</a>
+                <a href="javascript:void(0)" onclick="toast('Simulated Terms of Service')" class="hover:underline">Terms of Service</a>
+                <a href="javascript:void(0)" onclick="toast('Simulated API Docs')" class="hover:underline">Developers</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ========================================================================= -->
+    <!-- GAME DETAIL MODAL (NEW INTERACTION: REVIEWS, CLIPS, PRICING)             -->
+    <!-- ========================================================================= -->
+    <div id="gameDetailModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-bgCard border border-surfaceLight rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative text-gray-200">
+            
+            <!-- Modal Header Header Banner -->
+            <div id="modalHeaderBg" class="h-44 md:h-52 w-full relative flex items-end p-6 bg-gradient-to-r from-purple-900 via-indigo-900 to-black">
+                <button onclick="closeModal('gameDetailModal')" class="absolute top-4 right-4 bg-black/60 hover:bg-black text-white w-8 h-8 rounded-full flex items-center justify-center border border-white/20 transition">✕</button>
+                <div class="relative z-10">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span id="modalGenre" class="bg-accentViolet/80 text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded-full">Genre</span>
+                        <span id="modalRating" class="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">★ 4.8</span>
+                    </div>
+                    <h2 id="modalTitle" class="text-2xl md:text-4xl font-black text-white drop-shadow-md">Game Title</h2>
+                    <p id="modalTagline" class="text-xs md:text-sm text-gray-300 mt-1 max-w-xl">Detailed summary of the game experience.</p>
+                </div>
+            </div>
+
+            <!-- Modal Content Navigation Tabs -->
+            <div class="border-b border-surfaceLight/60 bg-surfaceDark px-6 flex gap-6 text-sm font-semibold">
+                <button id="tabBtn-clips" onclick="switchModalTab('clips')" class="py-3 text-accentGlow border-b-2 border-accentViolet">🎬 Gameplay Clips</button>
+                <button id="tabBtn-reviews" onclick="switchModalTab('reviews')" class="py-3 text-gray-400 hover:text-white border-b-2 border-transparent">⭐ User Reviews & Performance</button>
+                <button id="tabBtn-pricing" onclick="switchModalTab('pricing')" class="py-3 text-gray-400 hover:text-white border-b-2 border-transparent">💰 Pricing & Editions</button>
+            </div>
+
+            <div class="p-6">
+                <!-- TAB 1: GAMEPLAY CLIPS -->
+                <div id="tab-clips" class="space-y-6">
+                    <div class="bg-surfaceDark p-4 rounded-xl border border-surfaceLight flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div>
+                            <h3 class="font-bold text-white text-base">Interactive Clip Player</h3>
+                            <p class="text-xs text-gray-400">Simulated canvas animation representing live gameplay clips in 60fps.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] bg-red-950/80 border border-red-500/40 text-red-300 font-mono px-2 py-0.5 rounded">SIMULATED CLIP</span>
+                        </div>
+                    </div>
+
+                    <!-- Canvas Gameplay Clip Simulation -->
+                    <div class="relative rounded-xl overflow-hidden bg-black border border-surfaceLight aspect-video max-h-[380px] flex items-center justify-center">
+                        <canvas id="clipCanvas" width="640" height="360" class="w-full h-full block"></canvas>
+                        <div class="absolute bottom-3 left-3 bg-black/70 px-3 py-1 rounded text-xs font-mono text-gray-300 backdrop-blur">
+                            Clip: <span id="currentClipName" class="text-accentGlow font-bold">Combat Highlights</span>
+                        </div>
+                        <button id="canvasPlayBtn" onclick="toggleCanvasPlay()" class="absolute bg-accentViolet/90 hover:bg-accentViolet text-white px-4 py-2 rounded-lg font-bold text-xs shadow-lg backdrop-blur">
+                            Pause Animation
+                        </button>
+                    </div>
+
+                    <!-- Clip Switcher Thumbnails -->
+                    <div>
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">Available Highlights</span>
+                        <div class="grid grid-cols-3 gap-3" id="clipSelectorList">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: USER REVIEWS -->
+                <div id="tab-reviews" class="hidden space-y-6">
+                    <!-- Rating Overview Header -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-surfaceDark p-4 rounded-xl border border-surfaceLight">
+                        <div class="flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-surfaceLight pb-4 md:pb-0">
+                            <span id="modalReviewScore" class="text-4xl font-extrabold text-white">4.8</span>
+                            <div class="text-amber-400 text-sm my-1">★★★★★</div>
+                            <span class="text-xs text-gray-400">Based on 1,240 simulated reviews</span>
+                        </div>
+                        <div class="col-span-2 flex flex-col justify-center gap-2 text-xs">
+                            <div class="flex items-center gap-2">
+                                <span class="w-20 text-gray-400">Graphics</span>
+                                <div class="flex-1 bg-bgDark h-2 rounded-full overflow-hidden">
+                                    <div class="bg-accentViolet h-full w-[92%]"></div>
+                                </div>
+                                <span class="text-gray-300 font-mono">9.2</span>
+                            </div>
+                            <div class="flex flex-col md:flex-row items-center gap-2">
+                                <span class="w-20 text-gray-400">Gameplay</span>
+                                <div class="flex-1 w-full bg-bgDark h-2 rounded-full overflow-hidden">
+                                    <div class="bg-emerald-500 h-full w-[95%]"></div>
+                                </div>
+                                <span class="text-gray-300 font-mono">9.5</span>
+                            </div>
+                            <div class="flex flex-col md:flex-row items-center gap-2">
+                                <span class="w-20 text-gray-400">Performance</span>
+                                <div class="flex-1 w-full bg-bgDark h-2 rounded-full overflow-hidden">
+                                    <div class="bg-indigo-500 h-full w-[88%]"></div>
+                                </div>
+                                <span class="text-gray-300 font-mono">8.8</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reviews List -->
+                    <div id="reviewsContainer" class="space-y-4">
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+
+                <!-- TAB 3: PRICING & EDITIONS -->
+                <div id="tab-pricing" class="hidden space-y-6">
+                    <div class="bg-surfaceDark p-5 rounded-xl border border-surfaceLight">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 class="font-bold text-white text-lg">Base Game Pricing</h3>
+                                <p class="text-xs text-gray-400">Available across verified store partners.</p>
+                            </div>
+                            <span id="modalPriceTag" class="text-2xl font-black text-emerald-400">$19.99</span>
+                        </div>
+
+                        <!-- Platform Breakdown Grid -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="pricingPlatformBreakdown">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Simulated Purchase Action -->
+                    <div class="p-4 rounded-xl bg-gradient-to-r from-surfaceDark to-bgCard border border-accentViolet/40 flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div>
+                            <span class="text-xs font-semibold text-accentGlow block">Simulated Transaction Demo</span>
+                            <span class="text-xs text-gray-400">Clicking buy will trigger a local toast notification demo.</span>
+                        </div>
+                        <button onclick="toast('Simulated checkout process initialized! No money was spent.'); closeModal('gameDetailModal')" class="w-full md:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg transition shadow-lg">
+                            🛒 Purchase Game (Simulated)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="border-t border-surfaceLight/60 bg-surfaceDark px-6 py-4 flex justify-between items-center">
+                <div class="text-xs text-gray-400">
+                    Press <kbd class="px-1.5 py-0.5 bg-bgDark border border-surfaceLight rounded text-[10px]">ESC</kbd> to close
+                </div>
+                <button onclick="closeModal('gameDetailModal')" class="px-4 py-2 bg-surfaceLight hover:bg-surfaceDark text-white text-xs font-semibold rounded-lg transition">
+                    Close Details
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SIGN IN MODAL (SIMULATED) -->
+    <div id="signInModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="bg-bgCard border border-surfaceLight rounded-2xl max-w-md w-full p-6 shadow-2xl relative text-gray-200">
+            <button onclick="closeModal('signInModal')" class="absolute top-4 right-4 text-gray-400 hover:text-white">✕</button>
+            <h3 class="text-xl font-bold text-white mb-1">Sign In to GameFinder</h3>
+            <p class="text-xs text-gray-400 mb-4">Simulated offline login modal. No data is sent over the network.</p>
+            
+            <form onsubmit="handleSignIn(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Email / Gamer Tag</label>
+                    <input type="text" required placeholder="Gamer123" class="w-full bg-bgDark border border-surfaceLight rounded-lg p-2.5 text-xs text-white focus:border-accentViolet outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Password</label>
+                    <input type="password" required placeholder="••••••••" class="w-full bg-bgDark border border-surfaceLight rounded-lg p-2.5 text-xs text-white focus:border-accentViolet outline-none">
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-accentViolet hover:bg-accentVioletHover text-white font-bold text-xs rounded-lg transition">
+                    Sign In (Simulated)
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // ==========================================
+        // DATA MODEL (FICTIONAL DEMO DATA)
+        // ==========================================
+        const GAMES = [
+            {
+                id: 'phasma',
+                title: 'Phasmo-Hunter Online',
+                tagline: 'Co-op ghost hunting action with tactical equipment and terrifying encounters.',
+                genre: 'Horror',
+                price: 0,
+                priceFormatted: 'Free to Play',
+                platforms: ['PC', 'PlayStation', 'Xbox'],
+                mode: 'Co-op',
+                difficulty: 'Challenging',
+                matchReason: 'Matches "free horror game with friends" prompt perfectly.',
+                rating: 4.8,
+                reviewCount: 1840,
+                bgGradient: 'from-purple-950 to-stone-900',
+                clips: [
+                    { title: 'Haunted Mansion Breach', speed: 1.5, color: '#8B5CF6' },
+                    { title: 'EMF Scanner Detection', speed: 2.2, color: '#EF4444' },
+                    { title: 'Escape Room Sequence', speed: 0.8, color: '#10B981' }
+                ],
+                reviews: [
+                    { author: 'GhostHunter_99', rating: 5, text: 'Genuinely terrifying with friends on Discord! Best free horror experience.', platform: 'PC', verified: true },
+                    { author: 'PixelSamurai', rating: 4, text: 'Great atmosphere. A bit buggy on Xbox, but super fun gameplay loop.', platform: 'Xbox', verified: true }
+                ],
+                pricingDetails: [
+                    { store: 'Steam (PC)', price: 'Free', status: 'Available' },
+                    { store: 'PlayStation Store', price: 'Free', status: 'Available' },
+                    { store: 'Xbox Marketplace', price: 'Free', status: 'Available' }
+                ]
+            },
+            {
+                id: 'starlight',
+                title: 'Starlight Odyssey: Infinite',
+                tagline: 'Immersive narrative Sci-Fi RPG spanning solar systems and ancient secrets.',
+                genre: 'RPG',
+                price: 14.99,
+                priceFormatted: '$14.99',
+                platforms: ['PC', 'PlayStation', 'Switch'],
+                mode: 'Single-player',
+                difficulty: 'Moderate',
+                matchReason: 'Fits "story rich singleplayer sci-fi RPG under $20".',
+                rating: 4.9,
+                reviewCount: 3200,
+                bgGradient: 'from-blue-950 to-indigo-900',
+                clips: [
+                    { title: 'Hyperdrive Warp Sequence', speed: 3.0, color: '#3B82F6' },
+                    { title: 'Alien Ruin Exploration', speed: 1.0, color: '#EC4899' },
+                    { title: 'Spaceship Combat', speed: 2.5, color: '#F59E0B' }
+                ],
+                reviews: [
+                    { author: 'CosmicVoyager', rating: 5, text: 'The story blew me away. 60+ hours of content for $15 is insane value.', platform: 'PC', verified: true },
+                    { author: 'SwitchGamer21', rating: 5, text: 'Runs smooth as butter on Switch in handheld mode.', platform: 'Switch', verified: true }
+                ],
+                pricingDetails: [
+                    { store: 'Steam Store', price: '$14.99', status: '25% Off Sale' },
+                    { store: 'Nintendo eShop', price: '$14.99', status: 'Standard' },
+                    { store: 'PlayStation Store', price: '$19.99', status: 'Standard' }
+                ]
+            },
+            {
+                id: 'brawl',
+                title: 'Super Turbo Brawl Party',
+                tagline: 'Fast-paced frantic party brawler for couch co-op and online chaos.',
+                genre: 'Party',
+                price: 19.99,
+                priceFormatted: '$19.99',
+                platforms: ['Switch', 'PlayStation', 'Xbox', 'PC'],
+                mode: 'Multiplayer',
+                difficulty: 'Casual',
+                matchReason: 'Matches "casual switch multiplayer game".',
+                rating: 4.6,
+                reviewCount: 910,
+                bgGradient: 'from-fuchsia-950 to-pink-900',
+                clips: [
+                    { title: '4-Player Arena Chaos', speed: 2.0, color: '#F43F5E' },
+                    { title: 'Ultimate Finisher Moves', speed: 1.8, color: '#8B5CF6' }
+                ],
+                reviews: [
+                    { author: 'PartyKing', rating: 5, text: 'Essential game for family game nights. Hilarious physics!', platform: 'Switch', verified: true }
+                ],
+                pricingDetails: [
+                    { store: 'Nintendo eShop', price: '$19.99', status: 'Available' },
+                    { store: 'Steam Store', price: '$19.99', status: 'Available' }
+                ]
+            },
+            {
+                id: 'cyberblade',
+                title: 'Cyberblade Neon Protocol',
+                tagline: 'Precision fast-paced cyberpunk slasher with soundtrack synth wave tracks.',
+                genre: 'Action',
+                price: 29.99,
+                priceFormatted: '$29.99',
+                platforms: ['PC', 'PlayStation'],
+                mode: 'Single-player',
+                difficulty: 'Challenging',
+                matchReason: 'Top pick for high-octane single-player action seekers.',
+                rating: 4.7,
+                reviewCount: 1420,
+                bgGradient: 'from-violet-950 to-cyan-950',
+                clips: [
+                    { title: 'Neon Highway Dash', speed: 2.8, color: '#06B6D4' },
+                    { title: 'Katana Deflect Battle', speed: 2.0, color: '#A855F7' }
+                ],
+                reviews: [
+                    { author: 'ReflexGod', rating: 5, text: 'Hard as nails but so satisfying when you master the dash.', platform: 'PC', verified: true }
+                ],
+                pricingDetails: [
+                    { store: 'Steam (PC)', price: '$29.99', status: 'Available' },
+                    { store: 'PS Store', price: '$29.99', status: 'Available' }
+                ]
+            },
+            {
+                id: 'realm',
+                title: 'Realm Tactics: Sovereignty',
+                tagline: 'Turn-based medieval fantasy strategy game with deep empire management.',
+                genre: 'Strategy',
+                price: 0,
+                priceFormatted: 'Free to Play',
+                platforms: ['PC'],
+                mode: 'Multiplayer',
+                difficulty: 'Moderate',
+                matchReason: 'Matches strategy lovers seeking deep multiplayer systems.',
+                rating: 4.4,
+                reviewCount: 650,
+                bgGradient: 'from-amber-950 to-stone-900',
+                clips: [
+                    { title: 'Castle Siege Tactical View', speed: 1.2, color: '#EAB308' }
+                ],
+                reviews: [
+                    { author: 'TacticsMaster', rating: 4, text: 'Very detailed empire building. Fair free-to-play model.', platform: 'PC', verified: true }
+                ],
+                pricingDetails: [
+                    { store: 'Steam Store', price: 'Free', status: 'Base Game Free' }
+                ]
+            },
+            {
+                id: 'dungeon',
+                title: 'Dungeon Crawl Legends',
+                tagline: 'Retro isometric roguelike dungeon crawler with randomized loot drops.',
+                genre: 'Action',
+                price: 9.99,
+                priceFormatted: '$9.99',
+                platforms: ['PC', 'Switch'],
+                mode: 'Co-op',
+                difficulty: 'Challenging',
+                matchReason: 'Great budget co-op pick with infinite replayability.',
+                rating: 4.5,
+                reviewCount: 780,
+                bgGradient: 'from-emerald-950 to-gray-900',
+                clips: [
+                    { title: 'Boss Floor Cleared', speed: 1.6, color: '#10B981' }
+                ],
+                reviews: [
+                    { author: 'LootGoblin', rating: 5, text: 'Addictive gameplay loop. Perfect on the Switch!', platform: 'Switch', verified: true }
+                ],
+                pricingDetails: [
+                    { store: 'Steam Store', price: '$9.99', status: 'Available' },
+                    { store: 'Nintendo eShop', price: '$9.99', status: 'Available' }
+                ]
+            }
+        ];
+
+        // STATE APP MANAGEMENT
+        let activeNav = 'discover';
+        let favorites = new Set();
+        let compareList = new Set();
+        let reactions = {}; // { gameId: 'like' | 'dislike' }
+        let currentModalGame = null;
+        let canvasAnimId = null;
+        let isCanvasPlaying = true;
+        let currentClipIndex = 0;
+
+        // INITIALIZATION
+        window.onload = function() {
+            renderGamesGrid(GAMES);
+            initCanvasAnimation();
+            
+            // Listen for Escape key to close modal
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeModal('gameDetailModal');
+                    closeModal('signInModal');
+                }
+            });
+        };
+
+        // RENDER GAMES GRID
+        function renderGamesGrid(gamesToRender) {
+            const grid = document.getElementById('gamesGrid');
+            const emptyState = document.getElementById('emptyState');
+            const gameCount = document.getElementById('gameCount');
+
+            grid.innerHTML = '';
+            gameCount.innerText = gamesToRender.length;
+
+            if (gamesToRender.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            gamesToRender.forEach(game => {
+                const isFav = favorites.has(game.id);
+                const isComp = compareList.has(game.id);
+                const userReaction = reactions[game.id];
+
+                const card = document.createElement('div');
+                card.className = 'bg-bgCard hover:bg-surfaceDark rounded-2xl border border-surfaceLight/60 hover:border-accentViolet/50 transition duration-300 flex flex-col overflow-hidden group shadow-lg';
+                
+                card.innerHTML = `
+                    <!-- Card Media / Cover Placeholder -->
+                    <div class="h-36 bg-gradient-to-br ${game.bgGradient} p-4 relative flex flex-col justify-between cursor-pointer" onclick="openGameDetail('${game.id}')">
+                        <div class="flex justify-between items-start">
+                            <span class="bg-black/60 text-accentGlow text-[10px] font-bold px-2 py-1 rounded-md backdrop-blur border border-white/10">
+                                ${game.genre}
+                            </span>
+                            <span class="${game.price === 0 ? 'bg-emerald-900/80 text-emerald-300 border-emerald-500/40' : 'bg-surfaceDark text-white border-surfaceLight'} text-xs font-black px-2.5 py-1 rounded-md border shadow">
+                                ${game.priceFormatted}
+                            </span>
+                        </div>
+                        <div>
+                            <span class="text-amber-400 text-xs font-bold">★ ${game.rating}</span>
+                            <h3 class="text-lg font-extrabold text-white group-hover:text-accentGlow transition leading-tight">${game.title}</h3>
+                        </div>
+                    </div>
+
+                    <!-- Card Body -->
+                    <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+                        <p class="text-xs text-gray-400 line-clamp-2">${game.tagline}</p>
+                        
+                        <!-- AI Match Explanation -->
+                        <div class="bg-surfaceDark/80 p-2.5 rounded-xl border border-surfaceLight/40 text-[11px] text-gray-300 flex items-start gap-2">
+                            <span class="text-accentViolet text-sm">💡</span>
+                            <div>
+                                <span class="font-bold text-accentGlow block">Why this matches:</span>
+                                <span>${game.matchReason}</span>
+                            </div>
+                        </div>
+
+                        <!-- Platforms Badges -->
+                        <div class="flex flex-wrap gap-1">
+                            ${game.platforms.map(p => `<span class="bg-bgDark text-gray-400 text-[10px] px-2 py-0.5 rounded border border-surfaceLight">${p}</span>`).join('')}
+                            <span class="bg-bgDark text-accentGlow text-[10px] px-2 py-0.5 rounded border border-surfaceLight">${game.mode}</span>
+                        </div>
+
+                        <!-- Card Action Controls -->
+                        <div class="pt-2 border-t border-surfaceLight/40 flex items-center justify-between gap-2">
+                            <button onclick="openGameDetail('${game.id}')" class="flex-1 py-2 bg-accentViolet hover:bg-accentVioletHover text-white font-bold text-xs rounded-lg transition text-center shadow">
+                                🎬 Clips & Reviews
+                            </button>
+                            
+                            <button onclick="toggleFavorite('${game.id}')" title="Favorite" class="p-2 rounded-lg ${isFav ? 'bg-red-950/60 text-red-400 border border-red-500/40' : 'bg-surfaceDark text-gray-400 hover:text-white'} transition">
+                                ${isFav ? '❤️' : '🤍'}
+                            </button>
+
+                            <button onclick="toggleReaction('${game.id}', 'like')" title="Like Game" class="p-2 rounded-lg ${userReaction === 'like' ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/40' : 'bg-surfaceDark text-gray-400 hover:text-white'} transition">
+                                👍
+                            </button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // ==========================================
+        // NEW INTERACTION: GAME DETAIL MODAL SYSTEM
+        // ==========================================
+        function openGameDetail(gameId) {
+            const game = GAMES.find(g => g.id === gameId);
+            if (!game) return;
+
+            currentModalGame = game;
+            currentClipIndex = 0;
+
+            // Populate Modal Headers
+            document.getElementById('modalTitle').innerText = game.title;
+            document.getElementById('modalTagline').innerText = game.tagline;
+            document.getElementById('modalGenre').innerText = game.genre;
+            document.getElementById('modalRating').innerText = `★ ${game.rating} (${game.reviewCount} reviews)`;
+            document.getElementById('modalReviewScore').innerText = game.rating;
+            document.getElementById('modalPriceTag').innerText = game.priceFormatted;
+
+            // Render Clips Thumbnails
+            const clipList = document.getElementById('clipSelectorList');
+            clipList.innerHTML = '';
+            game.clips.forEach((clip, idx) => {
+                const btn = document.createElement('button');
+                btn.className = `p-3 rounded-lg border text-left text-xs transition ${idx === currentClipIndex ? 'bg-accentViolet/20 border-accentViolet text-white font-bold' : 'bg-surfaceDark border-surfaceLight text-gray-400 hover:text-white'}`;
+                btn.onclick = () => selectClip(idx);
+                btn.innerHTML = `
+                    <div class="flex items-center justify-between mb-1">
+                        <span>Clip #${idx+1}</span>
+                        <span class="w-2 h-2 rounded-full" style="background-color:${clip.color}"></span>
+                    </div>
+                    <div class="truncate text-white font-medium">${clip.title}</div>
+                `;
+                clipList.appendChild(btn);
+            });
+
+            // Render Reviews
+            const reviewsContainer = document.getElementById('reviewsContainer');
+            reviewsContainer.innerHTML = '';
+            game.reviews.forEach(rev => {
+                const item = document.createElement('div');
+                item.className = 'p-4 rounded-xl bg-surfaceDark border border-surfaceLight text-xs space-y-2';
+                item.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-white">${rev.author}</span>
+                            ${rev.verified ? '<span class="bg-emerald-950 text-emerald-400 text-[9px] px-1.5 py-0.5 rounded border border-emerald-500/30">Verified Purchase</span>' : ''}
+                        </div>
+                        <span class="text-amber-400 font-bold">★ ${rev.rating}.0</span>
+                    </div>
+                    <p class="text-gray-300">${rev.text}</p>
+                    <div class="text-[10px] text-gray-500 flex gap-3">
+                        <span>Platform: ${rev.platform}</span>
+                        <span>•</span>
+                        <button onclick="toast('Thanks for your review feedback!')" class="hover:text-gray-300">👍 Helpful (12)</button>
+                    </div>
+                `;
+                reviewsContainer.appendChild(item);
+            });
+
+            // Render Pricing Breakdown
+            const pricingBreakdown = document.getElementById('pricingPlatformBreakdown');
+            pricingBreakdown.innerHTML = '';
+            game.pricingDetails.forEach(p => {
+                const item = document.createElement('div');
+                item.className = 'p-3 rounded-lg bg-bgDark border border-surfaceLight flex justify-between items-center text-xs';
+                item.innerHTML = `
+                    <div>
+                        <div class="font-bold text-white">${p.store}</div>
+                        <div class="text-[10px] text-gray-400">${p.status}</div>
+                    </div>
+                    <span class="font-mono font-bold text-emerald-400">${p.price}</span>
+                `;
+                pricingBreakdown.appendChild(item);
+            });
+
+            // Set Canvas state
+            document.getElementById('currentClipName').innerText = game.clips[0].title;
+            switchModalTab('clips');
+            openModal('gameDetailModal');
+        }
+
+        function switchModalTab(tabName) {
+            ['clips', 'reviews', 'pricing'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                const btn = document.getElementById(`tabBtn-${t}`);
+                btn.classList.remove('text-accentGlow', 'border-accentViolet');
+                btn.classList.add('text-gray-400', 'border-transparent');
+            });
+
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tabBtn-${tabName}`);
+            activeBtn.classList.remove('text-gray-400', 'border-transparent');
+            activeBtn.classList.add('text-accentGlow', 'border-accentViolet');
+        }
+
+        function selectClip(index) {
+            if (!currentModalGame || !currentModalGame.clips[index]) return;
+            currentClipIndex = index;
+            document.getElementById('currentClipName').innerText = currentModalGame.clips[index].title;
+            
+            // Highlight selector
+            const clipList = document.getElementById('clipSelectorList').children;
+            for (let i = 0; i < clipList.length; i++) {
+                if (i === index) {
+                    clipList[i].className = 'p-3 rounded-lg border text-left text-xs transition bg-accentViolet/20 border-accentViolet text-white font-bold';
+                } else {
+                    clipList[i].className = 'p-3 rounded-lg border text-left text-xs transition bg-surfaceDark border-surfaceLight text-gray-400 hover:text-white';
+                }
+            }
+            toast(`Switched clip to "${currentModalGame.clips[index].title}"`);
+        }
+
+        // ==========================================
+        // SIMULATED CANVAS CLIP PLAYER
+        // ==========================================
+        let canvasAngle = 0;
+        function initCanvasAnimation() {
+            const canvas = document.getElementById('clipCanvas');
+            const ctx = canvas.getContext('2d');
+
+            function render() {
+                if (isCanvasPlaying && currentModalGame) {
+                    const currentClip = currentModalGame.clips[currentClipIndex] || currentModalGame.clips[0];
+                    canvasAngle += 0.03 * (currentClip.speed || 1.0);
+
+                    // Clear canvas
+                    ctx.fillStyle = '#0A0910';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    // Draw grid background
+                    ctx.strokeStyle = '#18152B';
+                    ctx.lineWidth = 1;
+                    for (let x = 0; x < canvas.width; x += 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(x, 0);
+                        ctx.lineTo(x, canvas.height);
+                        ctx.stroke();
+                    }
+
+                    // Render simulated clip graphics
+                    const cx = canvas.width / 2;
+                    const cy = canvas.height / 2;
+
+                    // Rotating polygon representing gameplay action
+                    ctx.save();
+                    ctx.translate(cx, cy);
+                    ctx.rotate(canvasAngle);
+                    ctx.strokeStyle = currentClip.color || '#8B5CF6';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(-50, -50, 100, 100);
+                    ctx.restore();
+
+                    // Particle effects
+                    for (let i = 0; i < 5; i++) {
+                        const px = cx + Math.cos(canvasAngle + i) * (80 + i * 15);
+                        const py = cy + Math.sin(canvasAngle + i) * (80 + i * 15);
+                        ctx.fillStyle = currentClip.color || '#A78BFA';
+                        ctx.beginPath();
+                        ctx.arc(px, py, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+
+                    // Overlay HUD elements
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.font = '12px monospace';
+                    ctx.fillText('REC ● 60 FPS [SIMULATED]', 20, 30);
+                    ctx.fillText(`EFFECT_SPEED: ${(currentClip.speed || 1).toFixed(1)}x`, 20, 50);
+                }
+                requestAnimationFrame(render);
+            }
+            render();
+        }
+
+        function toggleCanvasPlay() {
+            isCanvasPlaying = !isCanvasPlaying;
+            const btn = document.getElementById('canvasPlayBtn');
+            btn.innerText = isCanvasPlaying ? 'Pause Animation' : 'Play Animation';
+            toast(isCanvasPlaying ? 'Clip playback resumed' : 'Clip playback paused');
+        }
+
+        // ==========================================
+        // PROMPT & SEARCH LOGIC
+        // ==========================================
+        function setPrompt(text) {
+            const input = document.getElementById('promptInput');
+            input.value = text;
+            document.getElementById('clearPromptBtn').classList.remove('hidden');
+            handleFindGame();
+        }
+
+        function clearPrompt() {
+            document.getElementById('promptInput').value = '';
+            document.getElementById('clearPromptBtn').classList.add('hidden');
+            applyFilters();
+        }
+
+        function handleFindGame() {
+            const query = document.getElementById('promptInput').value.toLowerCase().trim();
+            if (!query) {
+                applyFilters();
+                return;
+            }
+
+            document.getElementById('clearPromptBtn').classList.remove('hidden');
+
+            const filtered = GAMES.filter(game => {
+                const matchTitle = game.title.toLowerCase().includes(query);
+                const matchGenre = game.genre.toLowerCase().includes(query);
+                const matchTag = game.tagline.toLowerCase().includes(query);
+                const matchMode = game.mode.toLowerCase().includes(query);
+                const matchFree = query.includes('free') && game.price === 0;
+
+                return matchTitle || matchGenre || matchTag || matchMode || matchFree;
+            });
+
+            renderGamesGrid(filtered);
+            toast(`Found ${filtered.length} matches for your query.`);
+        }
+
+        // ==========================================
+        // FILTERING SYSTEM
+        // ==========================================
+        function toggleFilters() {
+            const content = document.getElementById('filterContent');
+            const arrow = document.getElementById('filterArrow');
+            const toggleText = document.getElementById('filterToggleText');
+
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                arrow.innerText = '▲';
+                toggleText.innerText = 'Hide Filters';
+            } else {
+                content.classList.add('hidden');
+                arrow.innerText = '▼';
+                toggleText.innerText = 'Show Filters';
+            }
+        }
+
+        function applyFilters() {
+            const platform = document.getElementById('filterPlatform').value;
+            const budget = document.getElementById('filterBudget').value;
+            const mode = document.getElementById('filterMode').value;
+            const genre = document.getElementById('filterGenre').value;
+            const difficulty = document.getElementById('filterDifficulty').value;
+
+            const isFiltered = platform !== 'All' || budget !== 'All' || mode !== 'All' || genre !== 'All' || difficulty !== 'All';
+            document.getElementById('activeFilterBadge').classList.toggle('hidden', !isFiltered);
+
+            let result = GAMES;
+
+            if (activeNav === 'favorites') {
+                result = result.filter(g => favorites.has(g.id));
+            }
+
+            result = result.filter(game => {
+                if (platform !== 'All' && !game.platforms.includes(platform)) return false;
+                if (mode !== 'All' && game.mode !== mode) return false;
+                if (genre !== 'All' && game.genre !== genre) return false;
+                if (difficulty !== 'All' && game.difficulty !== difficulty) return false;
+
+                if (budget === 'Free' && game.price !== 0) return false;
+                if (budget === 'Under20' && game.price > 20) return false;
+                if (budget === 'Paid' && game.price === 0) return false;
+
+                return true;
+            });
+
+            renderGamesGrid(result);
+        }
+
+        function resetFilters() {
+            document.getElementById('filterPlatform').value = 'All';
+            document.getElementById('filterBudget').value = 'All';
+            document.getElementById('filterMode').value = 'All';
+            document.getElementById('filterGenre').value = 'All';
+            document.getElementById('filterDifficulty').value = 'All';
+            document.getElementById('promptInput').value = '';
+            document.getElementById('clearPromptBtn').classList.add('hidden');
+            applyFilters();
+            toast('Filters reset to default.');
+        }
+
+        // ==========================================
+        // USER INTERACTIONS & STATE
+        // ==========================================
+        function toggleFavorite(gameId) {
+            if (favorites.has(gameId)) {
+                favorites.delete(gameId);
+                toast('Removed game from Favorites.');
+            } else {
+                favorites.add(gameId);
+                toast('Added game to Favorites!');
+            }
+            document.getElementById('favCount').innerText = favorites.size;
+            applyFilters();
+        }
+
+        function toggleReaction(gameId, type) {
+            if (reactions[gameId] === type) {
+                delete reactions[gameId];
+                toast('Reaction removed.');
+            } else {
+                reactions[gameId] = type;
+                toast(`Marked as ${type}!`);
+            }
+            applyFilters();
+        }
+
+        function setActiveNav(nav) {
+            activeNav = nav;
+            document.getElementById('nav-discover').className = nav === 'discover' ? 'text-accentGlow hover:text-white transition flex items-center gap-1 font-bold' : 'text-gray-400 hover:text-white transition flex items-center gap-1';
+            document.getElementById('nav-favorites').className = nav === 'favorites' ? 'text-accentGlow hover:text-white transition flex items-center gap-1 font-bold' : 'text-gray-400 hover:text-white transition flex items-center gap-1';
+            
+            if (nav === 'favorites') {
+                document.getElementById('sectionTitle').innerHTML = '❤️ Favorite Games <span id="gameCount" class="text-xs bg-surfaceLight px-2.5 py-0.5 rounded-full text-accentGlow font-mono">0</span>';
+            } else {
+                document.getElementById('sectionTitle').innerHTML = '🎮 Recommended Games <span id="gameCount" class="text-xs bg-surfaceLight px-2.5 py-0.5 rounded-full text-accentGlow font-mono">6</span>';
+            }
+
+            applyFilters();
+        }
+
+        function resetView() {
+            setActiveNav('discover');
+            resetFilters();
+        }
+
+        function handleSignIn(e) {
+            e.preventDefault();
+            closeModal('signInModal');
+            toast('Successfully signed in (Simulated Session)');
+        }
+
+        // ==========================================
+        // MODAL & TOAST HELPERS
+        // ==========================================
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function toast(message) {
+            const container = document.getElementById('toastContainer');
+            const el = document.createElement('div');
+            el.className = 'bg-surfaceDark border border-accentViolet/50 text-white text-xs px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 pointer-events-auto animate-bounce';
+            el.innerHTML = `<span>⚡</span> <span>${message}</span>`;
+            
+            container.appendChild(el);
+            setTimeout(() => {
+                el.style.opacity = '0';
+                el.style.transition = 'opacity 0.3s';
+                setTimeout(() => el.remove(), 300);
+            }, 2600);
+        }
+    </script>
+</body>
+</html>
